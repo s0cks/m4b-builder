@@ -1,0 +1,9 @@
+services:
+  record:
+    build:
+      context: .
+    environment:
+      OUT_OWNER: "${OUT_OWNER:-}"
+    volumes:
+      - ./prose.txt:/app/prose.txt:ro
+      - ./out:/app/out

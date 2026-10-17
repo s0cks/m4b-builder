@@ -1,0 +1,63 @@
+import os
+import json
+import time
+import glob
+import hashlib
+import argparse
+import subprocess
+import numpy as np
+import soundfile as sf
+from kittenml import KittenTTS
+
+parser = argparse.ArgumentParser(description="An example CLI tool.")
+parser.add_argument("prose", help="Name of the file to process")
+parser.add_argument("-o", "--output", default="out/output.wav", help="Output file path")
+parser.add_argument(
+    "-v",
+    "--verbose",
+    action="store_true",
+    help="Increase output verbosity",
+)
+parser.add_argument(
+    "-r",
+    "--reference",
+    default="reference.wav",
+    help="The reference wav file",
+)
+parser.add_argument(
+    "-t",
+    "--reference-transcript",
+    default="reference-transcript.txt",
+    help="The transcript of the reference audio",
+)
+args = parser.parse_args()
+
+
+with open(args.reference_transcript, "r", encoding="utf-8") as file:
+    transcript = file.read().strip()
+
+try:
+    m = KittenTTS("KittenML/kitten-tts-2")
+    content = args.prose.strip()
+    if content.endswith(".txt"):
+        with open(content, "r", encoding="utf-8") as file:
+            content = file.read().strip()
+
+    start_time = time.perf_counter()
+    try:
+        audio = m.generate(
+            content,
+            reference=args.reference,
+            reference_text=transcript,
+            preset="expressive",
+        )
+    except Exception as e:
+        print(f"Failed to convert {content}. Error: {e}")
+        sys.exit(1)
+
+    end_time = time.perf_counter()
+    sf.write(args.output, audio, m.sample_rate)
+    execution_time = end_time - start_time
+    print(f"-> Saved: {args.output} ({execution_time:.6f} seconds)")
+except KeyboardInterrupt:
+    print("breaking....")
