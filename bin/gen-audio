@@ -1,0 +1,11 @@
+#!/usr/bin/env zsh
+PATH="$(pwd)/bin:$PATH"
+source "$(pwd)/env/bin/activate"
+for file in "$1"/**/*.txt(n); do
+  printf "processing %s => %s ...." "$file" "${file:r}.wav\n"
+  tts "$file" -o "${file:r}.wav" &>/dev/null
+  if [[ $? != 0 ]]; then
+    printf " failed to process %s" "$file\n"
+    exit 1
+  fi
+done

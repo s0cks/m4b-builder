@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# :vim set filetype=python :
 import os
 import json
 import time
@@ -21,13 +23,13 @@ parser.add_argument(
 parser.add_argument(
     "-r",
     "--reference",
-    default="reference.wav",
+    default="data/reference.wav",
     help="The reference wav file",
 )
 parser.add_argument(
     "-t",
     "--reference-transcript",
-    default="reference-transcript.txt",
+    default="data/reference-transcript.txt",
     help="The transcript of the reference audio",
 )
 args = parser.parse_args()
@@ -38,11 +40,13 @@ with open(args.reference_transcript, "r", encoding="utf-8") as file:
 
 try:
     m = KittenTTS("KittenML/kitten-tts-2")
+
     content = args.prose.strip()
     if content.endswith(".txt"):
         with open(content, "r", encoding="utf-8") as file:
             content = file.read().strip()
 
+    print(f"processing ${content}")
     start_time = time.perf_counter()
     try:
         audio = m.generate(

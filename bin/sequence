@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+# : vim set filetype=python :
+import io
+import json
+import argparse
+from pathlib import Path
+
+parser = argparse.ArgumentParser(description="An example CLI tool.")
+parser.add_argument("segments", help="The path of the segments.json file")
+parser.add_argument(
+    "-v",
+    "--verbose",
+    action="store_true",
+    help="Increase output verbosity",
+)
+parser.add_argument(
+    "-o",
+    "--output-file",
+    default="sequence",
+    help="The output file name",
+)
+args = parser.parse_args()
+
+with open(args.segments, "r", encoding="utf-8") as file:
+    manifest = json.load(file)
+
+seqBuilder = io.StringIO()
+
+hIndex = 0
+last_hIndex = 0
+pIndex = 0
+for s in manifest["segments"]:
+    cDir = Path(f"ch{hIndex:02d}")
+    cDir.mkdir(parents=True, exist_ok=True)
+
+    content = s["tts"]
+    if s["kind"] == "heading":
+        idx = hIndex
+        if idx > 0:
+            seqBuilder.write("\n")
+
+        hIndex = hIndex + 1
+        pIndex = 0
+        print(f" => Heading #{idx}: {content}")
+        with open(f"{cDir}/title.txt", "w", encoding="utf-8") as file:
+            file.write(f"{content}\n")
+        seqBuilder.write(f"{cDir}/title.wav\n")
+        last_hIndex = idx
+
+    elif s["kind"] == "paragraph":
+        idx = pIndex
+        pIndex = pIndex + 1
+        with open(f"{cDir}/p{idx:02d}.transcript.txt", "w", encoding="utf-8") as file:
+            file.write(f"{content}\n")
+
+        seqBuilder.write(f"{cDir}/p{idx:02d}.wav\n")
+
+with open(args.output_file, "w", encoding="utf-8") as file:
+    file.write(seqBuilder.getvalue())
+
+seqBuilder.close()

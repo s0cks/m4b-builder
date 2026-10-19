@@ -1,0 +1,22 @@
+#!/usr/bin/env zsh
+SCRIPT_DIR="${0:a:h}"
+PATH="$SCRIPT_DIR:$PATH"
+SOURCE_FILE="${AUDIOBOOK_SOURCE_FILE:-main.md}"
+DATA_DIR="${AUDIOBOOK_DATA_DIR:-$(pwd)/data}"
+SEGMENTS_FILE="$DATA_DIR/segments.json"
+SEQUENCE_FILE="$DATA_DIR/sequence"
+
+echo "building..."
+# 1. Segment prose
+echo "segmenting prose..."
+texttool --tts "$SOURCE_FILE" | jq >|"$SEGMENTS_FILE"
+# 2. Sequence prose segments
+echo "sequencing segments..."
+sequence -o "$SEQUENCE_FILE" "$SEGMENTS_FILE"
+# 3. Generate audio .wav files
+echo "generating .wav files..."
+gen-audio "$DATA_DIR"
+# 4. Compile
+echo "compiling...."
+
+echo "done"

@@ -27,5 +27,5 @@ COPY . .
 
 VOLUME [ "/app/output" ]
 
-ENTRYPOINT [ "python", ".", "prose.txt" ]
+ENTRYPOINT [ "python", "tts", "prose.txt" ]
 CMD []

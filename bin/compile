@@ -1,0 +1,66 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+  echo "Error: Please provide a sequence file. Example: $0 sequence.txt"
+  exit 1
+fi
+
+INPUT_LIST="$1"
+TMP_DIR="./tmp_audiobook"
+mkdir -p "$TMP_DIR"
+
+echo "Step 1: Generating high-quality 44.1kHz silence files..."
+ffmpeg -y -v error -f lavfi -i anullsrc=r=44100:cl=mono -t 0.5 "$TMP_DIR/silence_0.5s.wav"
+ffmpeg -y -v error -f lavfi -i anullsrc=r=44100:cl=mono -t 2.0 "$TMP_DIR/silence_2.0s.wav"
+ffmpeg -y -v error -f lavfi -i anullsrc=r=44100:cl=mono -t 3.5 "$TMP_DIR/silence_3.5s.wav"
+
+CHAPTER_NUM=0
+CONCAT_FILE=""
+
+compile_chapter() {
+  if [ -f "$CONCAT_FILE" ]; then
+    echo "file 'silence_3.5s.wav'" >>"$CONCAT_FILE"
+
+    OUT_NAME="chapter_$(printf "%02d" $CHAPTER_NUM).wav"
+    echo "--> Building $OUT_NAME..."
+
+    ffmpeg -y -v error -f concat -safe 0 -i "$CONCAT_FILE" -c copy "$OUT_NAME"
+    rm "$CONCAT_FILE"
+  fi
+}
+
+while IFS= read -r FILE_NAME || [ -n "$FILE_NAME" ]; do
+  FILE_NAME=$(echo "$FILE_NAME" | xargs)
+  [[ -z "$FILE_NAME" || "$FILE_NAME" == \#* ]] && continue
+
+  if [ ! -f "$FILE_NAME" ]; then
+    echo "Warning: File '$FILE_NAME' not found! Skipping."
+    continue
+  fi
+
+  SAFE_NAME=$(basename "$FILE_NAME")
+
+  echo "Resampling $FILE_NAME to 44.1kHz..."
+  ffmpeg -y -v error -i "$FILE_NAME" -ar 44100 -ac 1 "$TMP_DIR/$SAFE_NAME"
+
+  if [[ "$FILE_NAME" =~ (title|h2|heading) ]]; then
+    compile_chapter
+    ((CHAPTER_NUM++))
+    CONCAT_FILE="$TMP_DIR/list_ch_${CHAPTER_NUM}.txt"
+
+    echo "file 'silence_0.5s.wav'" >"$CONCAT_FILE"
+    echo "file '$SAFE_NAME'" >>"$CONCAT_FILE"
+    echo "file 'silence_2.0s.wav'" >>"$CONCAT_FILE"
+  else
+    if [ -z "$CONCAT_FILE" ] || [ ! -f "$CONCAT_FILE" ]; then
+      ((CHAPTER_NUM++))
+      CONCAT_FILE="$TMP_DIR/list_ch_${CHAPTER_NUM}.txt"
+      echo "file 'silence_0.5s.wav'" >"$CONCAT_FILE"
+    fi
+    echo "file '$SAFE_NAME'" >>"$CONCAT_FILE"
+  fi
+done <"$INPUT_LIST"
+compile_chapter
+
+rm -rf "$TMP_DIR"
+printf "finished."
